@@ -17,7 +17,7 @@ default: &default
   encoding: unicode
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
 
 
 development:
@@ -85,20 +85,5 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  primary: &primary_production
-    <<: *default
-    database: cinecrick_api_production
-    username: cinecrick_api
-    password: <%= ENV["CINECRICK_API_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: cinecrick_api_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: cinecrick_api_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: cinecrick_api_production_cable
-    migrations_paths: db/cable_migrate
+  url: <%= ENV["DATABASE_URL"] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
