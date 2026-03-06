@@ -10,9 +10,49 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_05_090319) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_06_085206) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "bookings", force: :cascade do |t|
+    t.date "booking_date"
+    t.datetime "created_at", null: false
+    t.bigint "ground_id", null: false
+    t.string "payment_status"
+    t.bigint "slot_id", null: false
+    t.string "status"
+    t.decimal "total_price"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["ground_id"], name: "index_bookings_on_ground_id"
+    t.index ["slot_id"], name: "index_bookings_on_slot_id"
+    t.index ["user_id"], name: "index_bookings_on_user_id"
+  end
+
+  create_table "grounds", force: :cascade do |t|
+    t.text "amenities"
+    t.string "closing_time"
+    t.datetime "created_at", null: false
+    t.string "image_url"
+    t.string "location"
+    t.string "name"
+    t.string "opening_time"
+    t.decimal "price_per_hour"
+    t.string "sport_type"
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "slots", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "end_time"
+    t.bigint "ground_id", null: false
+    t.decimal "price"
+    t.date "slot_date"
+    t.string "start_time"
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.index ["ground_id"], name: "index_slots_on_ground_id"
+  end
 
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -23,4 +63,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_05_090319) do
     t.string "password_digest"
     t.datetime "updated_at", null: false
   end
+
+  add_foreign_key "bookings", "grounds"
+  add_foreign_key "bookings", "slots"
+  add_foreign_key "bookings", "users"
+  add_foreign_key "slots", "grounds"
 end

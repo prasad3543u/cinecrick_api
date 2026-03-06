@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  ground: one
+  slot_date: 2026-03-06
+  start_time: MyString
+  end_time: MyString
+  price: 9.99
+  status: MyString
+
+two:
+  ground: two
+  slot_date: 2026-03-06
+  start_time: MyString
+  end_time: MyString
+  price: 9.99
+  status: MyString

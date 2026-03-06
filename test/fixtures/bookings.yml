@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  user: one
+  ground: one
+  slot: one
+  booking_date: 2026-03-06
+  total_price: 9.99
+  status: MyString
+  payment_status: MyString
+
+two:
+  user: two
+  ground: two
+  slot: two
+  booking_date: 2026-03-06
+  total_price: 9.99
+  status: MyString
+  payment_status: MyString

@@ -1,4 +1,7 @@
 class AuthController < ApplicationController
+  def health
+  render json: { status: "ok", app: "cinecrick_api" }, status: :ok
+end
   # POST /auth/signup
   def signup
     user = User.new(user_params)
