@@ -8,5 +8,5 @@ Rails.application.routes.draw do
 
   resources :grounds
   resources :slots
-  resources :bookings
+  resources :bookings, only: [:index, :create]
 end
