@@ -35,12 +35,14 @@ class AuthController < ApplicationController
   end
    
   def make_admin
-  user = User.find_by(email: params[:email])
+  email = params[:email]
+  user = User.find_by(email: email)
   if user
     user.update(role: "admin")
     render json: { message: "Done", email: user.email, role: user.role }
   else
-    render json: { error: "User not found" }
+    # Show all users so you can see what emails exist
+    render json: { error: "User not found", all_users: User.pluck(:email) }
   end
 end
 

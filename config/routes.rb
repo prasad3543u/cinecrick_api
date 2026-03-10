@@ -5,8 +5,7 @@ Rails.application.routes.draw do
   post "/auth/login", to: "auth#login"
   post "/grounds/:id/generate_slots", to: "grounds#generate_slots"
   get "/me", to: "auth#me"
-  get "/make_admin/:email", to: "admin#make_admin"
-
+  get "/make_admin", to: "auth#make_admin"
   resources :grounds do
     post :generate_slots, on: :member
   end
