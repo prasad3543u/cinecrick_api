@@ -1,8 +1,8 @@
 class AuthController < ApplicationController
   def health
-  render json: { status: "ok", app: "cinecrick_api" }, status: :ok
-end
-  # POST /auth/signup
+    render json: { status: "ok", app: "cinecrick_api" }, status: :ok
+  end
+
   def signup
     user = User.new(user_params)
 
@@ -14,7 +14,6 @@ end
     end
   end
 
-  # POST /auth/login
   def login
     user = User.find_by(email: params[:email])
 
@@ -26,7 +25,6 @@ end
     end
   end
 
-  # GET /me
   def me
     user = current_user
     if user
@@ -35,31 +33,32 @@ end
       render json: { error: "Unauthorized" }, status: :unauthorized
     end
   end
+   
+  def make_admin
+  user = User.find_by(email: params[:email])
+  if user
+    user.update(role: "admin")
+    render json: { message: "Done", email: user.email, role: user.role }
+  else
+    render json: { error: "User not found" }
+  end
+end
 
   private
 
-  # ✅ supports both payload styles:
-  # { name, email, password, password_confirmation }
-  # OR { auth: { ... } }
   def user_params
     params_to_use = params[:auth].presence || params
     params_to_use.permit(:name, :email, :password, :password_confirmation, :dob, :interest)
   end
 
-  # ✅ this was missing in your controller (caused 500 error)
   def safe_user(user)
-    { id: user.id, name: user.name, email: user.email, dob: user.dob, interest: user.interest}
-  end
-
-  # Reads Authorization: Bearer <token>
-  def current_user
-    header = request.headers["Authorization"]
-    return nil unless header
-
-    token = header.split(" ").last
-    decoded = JsonWebToken.decode(token)
-    return nil unless decoded && decoded[:user_id]
-
-    User.find_by(id: decoded[:user_id])
+    {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      dob: user.dob,
+      interest: user.interest,
+      role: user.role
+    }
   end
 end

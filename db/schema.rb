@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_06_085206) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_10_050955) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_06_085206) do
     t.date "booking_date"
     t.datetime "created_at", null: false
     t.bigint "ground_id", null: false
+    t.string "match_type"
     t.string "payment_status"
     t.bigint "slot_id", null: false
     t.string "status"
@@ -30,6 +31,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_06_085206) do
   end
 
   create_table "grounds", force: :cascade do |t|
+    t.string "admin_name"
+    t.string "admin_phone"
     t.text "amenities"
     t.string "closing_time"
     t.datetime "created_at", null: false
@@ -46,10 +49,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_06_085206) do
     t.datetime "created_at", null: false
     t.string "end_time"
     t.bigint "ground_id", null: false
+    t.integer "max_teams"
     t.decimal "price"
     t.date "slot_date"
     t.string "start_time"
     t.string "status"
+    t.integer "teams_booked_count"
     t.datetime "updated_at", null: false
     t.index ["ground_id"], name: "index_slots_on_ground_id"
   end
@@ -61,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_06_085206) do
     t.string "interest"
     t.string "name"
     t.string "password_digest"
+    t.string "role", default: "user", null: false
     t.datetime "updated_at", null: false
   end
 

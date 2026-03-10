@@ -1,12 +1,11 @@
 class SlotsController < ApplicationController
-  def index
-    slots = if params[:ground_id]
-      Slot.where(ground_id: params[:ground_id])
-    else
-      Slot.all
-    end
+  before_action :authenticate_request, only: [:create, :update, :destroy]
 
-    render json: slots, status: :ok
+  def index
+    slots = Slot.all
+    slots = slots.where(ground_id: params[:ground_id]) if params[:ground_id].present?
+    slots = slots.where(slot_date: params[:slot_date]) if params[:slot_date].present?
+    render json: slots.order(:slot_date, :start_time), status: :ok
   end
 
   def show
@@ -16,7 +15,6 @@ class SlotsController < ApplicationController
 
   def create
     slot = Slot.new(slot_params)
-
     if slot.save
       render json: slot, status: :created
     else
@@ -26,7 +24,6 @@ class SlotsController < ApplicationController
 
   def update
     slot = Slot.find(params[:id])
-
     if slot.update(slot_params)
       render json: slot, status: :ok
     else
@@ -43,6 +40,9 @@ class SlotsController < ApplicationController
   private
 
   def slot_params
-    params.permit(:ground_id, :slot_date, :start_time, :end_time, :price, :status)
+    params.permit(
+      :ground_id, :slot_date, :start_time, :end_time,
+      :price, :status, :max_teams, :teams_booked_count
+    )
   end
 end

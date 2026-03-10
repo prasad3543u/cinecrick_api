@@ -1,61 +1,76 @@
-
 class BookingsController < ApplicationController
-  before_action :authorize_request
+  before_action :authenticate_request
 
-  # GET /bookings
   def index
-    bookings = current_user.bookings.includes(:ground, :slot)
-
-    render json: bookings.as_json(
-      include: {
-        ground: {},
-        slot: {}
-      }
-    ), status: :ok
+    bookings = current_user.bookings.includes(:ground, :slot).order(created_at: :desc)
+    render json: bookings.as_json(include: [:ground, :slot]), status: :ok
   end
 
-  # POST /bookings
   def create
-    slot = Slot.find_by(id: params[:slot_id])
-    return render json: { error: "Slot not found" }, status: :not_found unless slot
+    slot = Slot.find(params[:slot_id])
+    match_type = params[:match_type]
 
-    if slot.status != "available"
-      return render json: { error: "Slot is not available" }, status: :unprocessable_entity
+    unless ["with_opponents", "without_opponents"].include?(match_type)
+      return render json: { error: "Invalid match type" }, status: :unprocessable_entity
     end
 
-    booking = Booking.new(
-      user: current_user,
-      ground_id: params[:ground_id],
-      slot_id: params[:slot_id],
-      booking_date: params[:booking_date],
-      total_price: params[:total_price],
-      status: "confirmed",
-      payment_status: "pending"
+    if slot.status == "booked"
+      return render json: { error: "This slot is already booked" }, status: :unprocessable_entity
+    end
+
+    booking = current_user.bookings.new(booking_params)
+    booking.ground_id = slot.ground_id
+    booking.booking_date = slot.slot_date
+    booking.total_price = slot.price
+    booking.match_type = match_type
+    booking.payment_status = "pending"
+
+    ActiveRecord::Base.transaction do
+      if match_type == "without_opponents"
+        booking.status = "confirmed"
+        booking.save!
+        slot.update!(teams_booked_count: 1, status: "booked")
+      else
+        current_count = slot.teams_booked_count || 0
+        new_count = current_count + 1
+        booking.status = "confirmed"
+        booking.save!
+
+        if new_count >= 2
+          slot.update!(teams_booked_count: 2, status: "booked")
+        else
+          slot.update!(teams_booked_count: 1, status: "available")
+        end
+      end
+    end
+
+    render json: booking.as_json(include: [:ground, :slot]), status: :created
+  rescue => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  def confirm
+    booking = current_user.bookings.includes(:slot, :ground).find(params[:id])
+    booking.update!(status: "confirmed")
+    booking.slot.update!(status: "booked")
+    render json: booking.as_json(include: [:ground, :slot]), status: :ok
+  end
+
+  def cancel
+    booking = current_user.bookings.includes(:slot, :ground).find(params[:id])
+    booking.update!(status: "cancelled")
+    booking.slot.update!(
+      status: "available",
+      teams_booked_count: [0, (booking.slot.teams_booked_count || 1) - 1].max
     )
-
-    if booking.save
-      slot.update(status: "booked")
-      render json: booking.as_json(include: [:ground, :slot]), status: :created
-    else
-      render json: { errors: booking.errors.full_messages }, status: :unprocessable_entity
-    end
+    render json: booking.as_json(include: [:ground, :slot]), status: :ok
+  rescue => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private
 
-  def authorize_request
-    header = request.headers["Authorization"]
-    return render json: { error: "Unauthorized" }, status: :unauthorized unless header
-
-    token = header.split(" ").last
-    decoded = JsonWebToken.decode(token)
-    return render json: { error: "Unauthorized" }, status: :unauthorized unless decoded && decoded[:user_id]
-
-    @current_user = User.find_by(id: decoded[:user_id])
-    return render json: { error: "Unauthorized" }, status: :unauthorized unless @current_user
-  end
-
-  def current_user
-    @current_user
+  def booking_params
+    params.permit(:slot_id, :ground_id, :booking_date, :total_price, :match_type)
   end
 end
