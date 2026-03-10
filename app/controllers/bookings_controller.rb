@@ -54,19 +54,21 @@ end
   booking.update!(status: "confirmed")
   booking.slot.update!(status: "booked")
   render json: booking.as_json(include: [:ground, :slot]), status: :ok
+rescue => e
+  render json: { error: e.message }, status: :unprocessable_entity
 end
 
-  def cancel
-    booking = current_user.bookings.includes(:slot, :ground).find(params[:id])
-    booking.update!(status: "cancelled")
-    booking.slot.update!(
-      status: "available",
-      teams_booked_count: [0, (booking.slot.teams_booked_count || 1) - 1].max
-    )
-    render json: booking.as_json(include: [:ground, :slot]), status: :ok
-  rescue => e
-    render json: { error: e.message }, status: :unprocessable_entity
-  end
+def cancel
+  booking = Booking.includes(:slot, :ground).find(params[:id])
+  booking.update!(status: "cancelled")
+  booking.slot.update!(
+    status: "available",
+    teams_booked_count: [0, (booking.slot.teams_booked_count || 1) - 1].max
+  )
+  render json: booking.as_json(include: [:ground, :slot]), status: :ok
+rescue => e
+  render json: { error: e.message }, status: :unprocessable_entity
+end
 
   def admin_index
   bookings = Booking.includes(:ground, :slot, :user).order(created_at: :desc)
