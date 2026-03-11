@@ -13,7 +13,6 @@ class GroundsController < ApplicationController
 
   def create
     ground = Ground.new(ground_params)
-
     if ground.save
       render json: ground, status: :created
     else
@@ -23,7 +22,6 @@ class GroundsController < ApplicationController
 
   def update
     ground = Ground.find(params[:id])
-
     if ground.update(ground_params)
       render json: ground, status: :ok
     else
@@ -46,13 +44,7 @@ class GroundsController < ApplicationController
     end
 
     date_obj = Date.parse(slot_date)
-
-    holidays = [
-      "2026-01-01",
-      "2026-01-26",
-      "2026-08-15"
-    ]
-
+    holidays = ["2026-01-01", "2026-01-26", "2026-08-15"]
     is_weekend = date_obj.saturday? || date_obj.sunday?
     is_holiday = holidays.include?(slot_date)
 
@@ -81,20 +73,18 @@ class GroundsController < ApplicationController
         end_time: slot_data[:end_time]
       )
 
-      slot.price = slot_data[:price]
-      slot.status = "available" if slot.status.blank?
-      slot.max_teams = 2
-      slot.teams_booked_count = 0 if slot.teams_booked_count.blank?
-      slot.save!
+      if slot.new_record?
+        slot.price = slot_data[:price]
+        slot.status = "available"
+        slot.max_teams = 2
+        slot.teams_booked_count = 0
+        slot.save!
+      end
 
       generated_slots << slot
     end
 
-    render json: {
-      message: "Slots generated successfully",
-      ground: ground,
-      slots: generated_slots
-    }, status: :ok
+    render json: { message: "Slots generated successfully", ground: ground, slots: generated_slots }, status: :ok
   end
 
   private

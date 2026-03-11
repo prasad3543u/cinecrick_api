@@ -3,10 +3,7 @@ Rails.application.routes.draw do
 
   post "/auth/signup", to: "auth#signup"
   post "/auth/login", to: "auth#login"
-  post "/grounds/:id/generate_slots", to: "grounds#generate_slots"
   get "/me", to: "auth#me"
-  get "/make_admin", to: "auth#make_admin"
-  get "/admin/bookings", to: "bookings#admin_index"
 
   resources :grounds do
     post :generate_slots, on: :member
@@ -20,4 +17,10 @@ Rails.application.routes.draw do
       patch :cancel
     end
   end
+
+  get "/admin/bookings", to: "bookings#admin_index"
+  get "/admin/stats", to: "admin#stats"
+  post "/admin/block_date", to: "admin#block_date"
+  delete "/admin/unblock_date", to: "admin#unblock_date"
+  get "/admin/blocked_dates", to: "admin#blocked_dates"
 end
