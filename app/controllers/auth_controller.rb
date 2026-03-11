@@ -33,6 +33,15 @@ class AuthController < ApplicationController
       render json: { error: "Unauthorized" }, status: :unauthorized
     end
   end
+
+  def update_profile
+    user = current_user
+    if user.update(profile_params)
+      render json: { user: safe_user(user) }, status: :ok
+    else
+      render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+    end
+  end 
    
   def make_admin
   email = params[:email]
@@ -51,6 +60,10 @@ end
   def user_params
     params_to_use = params[:auth].presence || params
     params_to_use.permit(:name, :email, :password, :password_confirmation, :dob, :interest)
+  end
+
+  def profile_params
+    params.permit(:name, :dob, :interest)
   end
 
   def safe_user(user)
