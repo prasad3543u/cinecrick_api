@@ -14,24 +14,31 @@ class BookingsController < ApplicationController
     return render json: { error: "Invalid match type" }, status: :unprocessable_entity
   end
 
-  if slot.status == "booked"
+  if slot.status == "booked" || slot.status == "pending"
     return render json: { error: "This slot is already booked" }, status: :unprocessable_entity
+  end
+
+  # Calculate price based on match type
+  total_price = if match_type == "without_opponents"
+    slot.price * 2  # paying for both team slots
+  else
+    slot.price      # paying for one team slot
   end
 
   booking = current_user.bookings.new(booking_params)
   booking.ground_id = slot.ground_id
   booking.booking_date = slot.slot_date
-  booking.total_price = slot.price
+  booking.total_price = total_price
   booking.match_type = match_type
   booking.payment_status = "pending"
-  booking.status = "pending"  # ← always pending until admin confirms
+  booking.status = "pending"
 
   ActiveRecord::Base.transaction do
     booking.save!
 
     if match_type == "without_opponents"
-      # Hold the slot but don't mark as booked yet
-      slot.update!(teams_booked_count: 1, status: "pending")
+      # Books entire ground — both team slots taken
+      slot.update!(teams_booked_count: 2, status: "pending")
     else
       current_count = slot.teams_booked_count || 0
       new_count = current_count + 1
