@@ -23,4 +23,6 @@ Rails.application.routes.draw do
   post "/admin/block_date", to: "admin#block_date"
   delete "/admin/unblock_date", to: "admin#unblock_date"
   get "/admin/blocked_dates", to: "admin#blocked_dates"
+  get "/admin/users", to: "admin#users"
+  patch "/admin/users/:id/update_role", to: "admin#update_user_role"
 end
