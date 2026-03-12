@@ -104,7 +104,7 @@ class AdminController < ApplicationController
       }
     }, status: :ok
   end
-
+  
   def update_role
     user = User.find(params[:id])
 
@@ -115,7 +115,15 @@ class AdminController < ApplicationController
     new_role = params[:role] == "admin" ? "admin" : "user"
     user.update!(role: new_role)
 
-    render json: { message: "Role updated to #{new_role}", user: safe_user(user) }, status: :ok
+    render json: {
+      message: "Role updated to #{new_role}",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    }, status: :ok
   end
 
 end
