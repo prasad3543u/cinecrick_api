@@ -44,7 +44,6 @@ class AdminController < ApplicationController
       return render json: { error: "ground_id and date are required" }, status: :unprocessable_entity
     end
 
-    # Mark all slots for this ground+date as blocked
     slots = Slot.where(ground_id: ground_id, slot_date: date)
 
     if slots.empty?
@@ -87,35 +86,36 @@ class AdminController < ApplicationController
   end
 
   def users
-  users = User.left_joins(:bookings)
-    .select("users.*, COUNT(bookings.id) as bookings_count")
-    .group("users.id")
-    .order(created_at: :desc)
+    users = User.left_joins(:bookings)
+      .select("users.*, COUNT(bookings.id) as bookings_count")
+      .group("users.id")
+      .order(created_at: :desc)
 
-  render json: users.map { |u|
-    {
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      dob: u.dob,
-      interest: u.interest,
-      bookings_count: u.bookings_count.to_i,
-      created_at: u.created_at
-    }
-  }, status: :ok
-end
-
-def update_role
-  user = User.find(params[:id])
-
-  if user.id == current_user.id
-    return render json: { error: "You cannot change your own role" }, status: :unprocessable_entity
+    render json: users.map { |u|
+      {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        dob: u.dob,
+        interest: u.interest,
+        bookings_count: u.bookings_count.to_i,
+        created_at: u.created_at
+      }
+    }, status: :ok
   end
 
-  new_role = params[:role] == "admin" ? "admin" : "user"
-  user.update!(role: new_role)
+  def update_role
+    user = User.find(params[:id])
 
-  render json: { message: "Role updated to #{new_role}", user: safe_user(user) }, status: :ok
-end
+    if user.id == current_user.id
+      return render json: { error: "You cannot change your own role" }, status: :unprocessable_entity
+    end
+
+    new_role = params[:role] == "admin" ? "admin" : "user"
+    user.update!(role: new_role)
+
+    render json: { message: "Role updated to #{new_role}", user: safe_user(user) }, status: :ok
+  end
+
 end
