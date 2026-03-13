@@ -5,6 +5,8 @@ Rails.application.routes.draw do
   post "/auth/login", to: "auth#login"
   get "/me", to: "auth#me"
   patch "/me/update", to: "auth#update_profile"
+  patch "/me/change_password", to: "auth#change_password"
+  delete "/me/delete", to: "auth#delete_account"
   resources :grounds do
     post :generate_slots, on: :member
   end

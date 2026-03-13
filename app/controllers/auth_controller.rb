@@ -55,6 +55,26 @@ class AuthController < ApplicationController
   end
 end
 
+
+def change_password
+  user = current_user
+  unless user.authenticate(params[:current_password])
+    return render json: { error: "Current password is incorrect" }, status: :unprocessable_entity
+  end
+  if user.update(password: params[:password], password_confirmation: params[:password_confirmation])
+    render json: { message: "Password updated successfully" }, status: :ok
+  else
+    render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+  end
+end
+
+def delete_account
+  user = current_user
+  user.destroy
+  render json: { message: "Account deleted" }, status: :ok
+end
+  
+
   private
 
   def user_params
