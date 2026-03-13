@@ -41,49 +41,46 @@ class AuthController < ApplicationController
     else
       render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
     end
-  end 
-   
+  end
+
   def make_admin
-  email = params[:email]
-  user = User.find_by(email: email)
-  if user
-    user.update(role: "admin")
-    render json: { message: "Done", email: user.email, role: user.role }
-  else
-    # Show all users so you can see what emails exist
-    render json: { error: "User not found", all_users: User.pluck(:email) }
+    email = params[:email]
+    user = User.find_by(email: email)
+    if user
+      user.update(role: "admin")
+      render json: { message: "Done", email: user.email, role: user.role }
+    else
+      render json: { error: "User not found", all_users: User.pluck(:email) }
+    end
   end
-end
 
-
-def change_password
-  user = current_user
-  unless user.authenticate(params[:current_password])
-    return render json: { error: "Current password is incorrect" }, status: :unprocessable_entity
+  def change_password
+    user = current_user
+    unless user.authenticate(params[:current_password])
+      return render json: { error: "Current password is incorrect" }, status: :unprocessable_entity
+    end
+    if user.update(password: params[:password], password_confirmation: params[:password_confirmation])
+      render json: { message: "Password updated successfully" }, status: :ok
+    else
+      render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+    end
   end
-  if user.update(password: params[:password], password_confirmation: params[:password_confirmation])
-    render json: { message: "Password updated successfully" }, status: :ok
-  else
-    render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
-  end
-end
 
-def delete_account
-  user = current_user
-  user.destroy
-  render json: { message: "Account deleted" }, status: :ok
-end
-  
+  def delete_account
+    user = current_user
+    user.destroy
+    render json: { message: "Account deleted" }, status: :ok
+  end
 
   private
 
   def user_params
     params_to_use = params[:auth].presence || params
-    params_to_use.permit(:name, :email, :password, :password_confirmation, :dob, :interest)
+    params_to_use.permit(:name, :email, :password, :password_confirmation, :dob, :phone)
   end
 
   def profile_params
-    params.permit(:name, :dob, :interest)
+    params.permit(:name, :dob, :phone)
   end
 
   def safe_user(user)
@@ -92,7 +89,7 @@ end
       name: user.name,
       email: user.email,
       dob: user.dob,
-      interest: user.interest,
+      phone: user.phone,
       role: user.role
     }
   end

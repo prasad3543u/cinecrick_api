@@ -98,13 +98,13 @@ class AdminController < ApplicationController
         email: u.email,
         role: u.role,
         dob: u.dob,
-        interest: u.interest,
+        phone: u.phone,
         bookings_count: u.bookings_count.to_i,
         created_at: u.created_at
       }
     }, status: :ok
   end
-  
+
   def update_role
     user = User.find(params[:id])
 
