@@ -10,21 +10,29 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_13_055142) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_16_092806) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "bookings", force: :cascade do |t|
+    t.boolean "balls_ready", default: false
     t.date "booking_date"
     t.datetime "created_at", null: false
     t.bigint "ground_id", null: false
+    t.boolean "ground_ready", default: false
+    t.string "groundsman_name"
+    t.string "groundsman_phone"
     t.string "match_type"
     t.string "payment_status"
     t.bigint "slot_id", null: false
     t.string "status"
     t.decimal "total_price"
+    t.string "umpire_name"
+    t.string "umpire_phone"
+    t.boolean "umpire_reached", default: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.boolean "water_arranged", default: false
     t.index ["ground_id"], name: "index_bookings_on_ground_id"
     t.index ["slot_id"], name: "index_bookings_on_slot_id"
     t.index ["user_id"], name: "index_bookings_on_user_id"

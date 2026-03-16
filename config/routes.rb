@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   patch "/me/update", to: "auth#update_profile"
   patch "/me/change_password", to: "auth#change_password"
   delete "/me/delete", to: "auth#delete_account"
+
   resources :grounds do
     post :generate_slots, on: :member
   end
@@ -17,14 +18,17 @@ Rails.application.routes.draw do
     member do
       patch :confirm
       patch :cancel
+      patch :assign_staff
+      patch :update_status
     end
   end
 
   get "/admin/bookings", to: "bookings#admin_index"
-  get "/admin/stats", to: "admin#stats"
-  post "/admin/block_date", to: "admin#block_date"
+  get "/admin/today",    to: "bookings#today"
+  get "/admin/stats",    to: "admin#stats"
+  post "/admin/block_date",     to: "admin#block_date"
   delete "/admin/unblock_date", to: "admin#unblock_date"
-  get "/admin/blocked_dates", to: "admin#blocked_dates"
-  get "/admin/users", to: "admin#users"
+  get "/admin/blocked_dates",   to: "admin#blocked_dates"
+  get "/admin/users",           to: "admin#users"
   patch "/admin/users/:id/update_role", to: "admin#update_role"
 end
