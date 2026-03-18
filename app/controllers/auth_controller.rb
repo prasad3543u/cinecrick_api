@@ -71,6 +71,25 @@ class AuthController < ApplicationController
     user.destroy
     render json: { message: "Account deleted" }, status: :ok
   end
+  
+
+  
+def refresh_token
+  user = current_user
+  if user
+    # Generate new token
+    token = JsonWebToken.encode(user_id: user.id)
+    render json: { 
+      token: token,
+      user: safe_user(user),
+      message: "Token refreshed successfully" 
+    }, status: :ok
+  else
+    render json: { error: "Unable to refresh token" }, status: :unauthorized
+  end
+end
+
+
 
   private
 
