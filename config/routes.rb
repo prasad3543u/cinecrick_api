@@ -3,7 +3,7 @@ Rails.application.routes.draw do
 
   post "/auth/signup", to: "auth#signup"
   post "/auth/login", to: "auth#login"
-  POST "/auth/refresh_token", to: "auth#refresh_token"
+  post "/auth/refresh_token", to: "auth#refresh_token"  # ← Fixed line
   get "/me", to: "auth#me"
   patch "/me/update", to: "auth#update_profile"
   patch "/me/change_password", to: "auth#change_password"
