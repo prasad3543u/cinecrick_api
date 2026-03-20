@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_16_092806) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_20_092256) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -27,9 +27,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_16_092806) do
     t.bigint "slot_id", null: false
     t.string "status"
     t.decimal "total_price"
+    t.boolean "umpire_arranged", default: false
     t.string "umpire_name"
     t.string "umpire_phone"
-    t.boolean "umpire_reached", default: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.boolean "water_arranged", default: false

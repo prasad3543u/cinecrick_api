@@ -3,7 +3,7 @@ Rails.application.routes.draw do
 
   post "/auth/signup", to: "auth#signup"
   post "/auth/login", to: "auth#login"
-  post "/auth/refresh_token", to: "auth#refresh_token"  # ← Fixed line
+  post "/auth/refresh_token", to: "auth#refresh_token"
   get "/me", to: "auth#me"
   patch "/me/update", to: "auth#update_profile"
   patch "/me/change_password", to: "auth#change_password"
@@ -26,6 +26,7 @@ Rails.application.routes.draw do
 
   get "/admin/bookings", to: "bookings#admin_index"
   get "/admin/today",    to: "bookings#today"
+  get "/admin/upcoming", to: "bookings#upcoming"
   get "/admin/stats",    to: "admin#stats"
   post "/admin/block_date",     to: "admin#block_date"
   delete "/admin/unblock_date", to: "admin#unblock_date"

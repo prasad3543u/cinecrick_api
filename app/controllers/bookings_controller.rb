@@ -7,7 +7,6 @@ class BookingsController < ApplicationController
   end
 
   def create
-    # FIX: Add .lock! with NOWAIT for better performance
     slot = Slot.lock("FOR UPDATE NOWAIT").find(params[:slot_id])
     match_type = params[:match_type]
 
@@ -15,12 +14,10 @@ class BookingsController < ApplicationController
       return render json: { error: "Invalid match type" }, status: :unprocessable_entity
     end
 
-    # FIX: Check slot availability with locked record
     if slot.status == "booked" || slot.status == "pending"
       return render json: { error: "This slot is already booked" }, status: :unprocessable_entity
     end
 
-    # FIX: Check if slot is fully booked
     if slot.teams_booked_count.to_i >= slot.max_teams.to_i
       return render json: { error: "Slot is already fully booked" }, status: :unprocessable_entity
     end
@@ -39,7 +36,6 @@ class BookingsController < ApplicationController
     booking.payment_status = "pending"
     booking.status         = "pending"
 
-    # FIX: Use transaction with retry logic and timeout
     begin
       ActiveRecord::Base.transaction do
         booking.save!
@@ -50,7 +46,7 @@ class BookingsController < ApplicationController
             teams_booked_count: slot.max_teams,
             status: "pending"
           )
-        else # with_opponents
+        else
           current_count = slot.teams_booked_count || 0
           new_count = current_count + 1
           
@@ -86,7 +82,6 @@ class BookingsController < ApplicationController
   def confirm
     booking = Booking.includes(:slot, :ground).find(params[:id])
     
-    # Only allow confirmation of pending bookings
     unless booking.status == "pending"
       return render json: { error: "Can only confirm pending bookings" }, 
                     status: :unprocessable_entity
@@ -105,13 +100,11 @@ class BookingsController < ApplicationController
   def cancel
     booking = Booking.includes(:slot, :ground).find(params[:id])
     
-    # Only allow cancellation of pending or confirmed bookings
     unless ['pending', 'confirmed'].include?(booking.status)
       return render json: { error: "Cannot cancel booking with status: #{booking.status}" }, 
                     status: :unprocessable_entity
     end
 
-    # Check if match date has passed
     if booking.booking_date < Date.today
       return render json: { error: "Cannot cancel past bookings" }, 
                     status: :unprocessable_entity
@@ -120,7 +113,6 @@ class BookingsController < ApplicationController
     ActiveRecord::Base.transaction do
       booking.update!(status: "cancelled")
       
-      # Properly reset slot based on current bookings
       slot = booking.slot
       other_confirmed_bookings = Booking.where(slot_id: slot.id, status: "confirmed")
                                         .where.not(id: booking.id)
@@ -132,13 +124,11 @@ class BookingsController < ApplicationController
       total_other_bookings = other_confirmed_bookings + other_pending_bookings
       
       if total_other_bookings > 0
-        # Slot still has other bookings
         slot.update!(
           teams_booked_count: total_other_bookings,
           status: total_other_bookings >= slot.max_teams ? "pending" : "available"
         )
       else
-        # No other bookings, reset to available
         slot.update!(
           status: "available",
           teams_booked_count: 0
@@ -151,18 +141,15 @@ class BookingsController < ApplicationController
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
-  # Admin assigns umpire + groundsman to a confirmed booking
   def assign_staff
     booking = Booking.find(params[:id])
     
-    # Only allow staff assignment for confirmed bookings
     unless booking.status == "confirmed"
       return render json: { 
         error: "Staff can only be assigned to confirmed bookings. Current status: #{booking.status}" 
       }, status: :unprocessable_entity
     end
 
-    # Validate phone numbers if provided
     if params[:umpire_phone].present? && params[:umpire_phone] !~ /\A\+?\d{10,15}\z/
       return render json: { error: "Invalid umpire phone number format" }, status: :unprocessable_entity
     end
@@ -183,26 +170,17 @@ class BookingsController < ApplicationController
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
-  # Admin updates match day status checkboxes
   def update_status
     booking = Booking.find(params[:id])
     
-    # Only allow status updates for confirmed bookings
     unless booking.status == "confirmed"
       return render json: { 
         error: "Status can only be updated for confirmed bookings. Current status: #{booking.status}" 
       }, status: :unprocessable_entity
     end
 
-    # Only allow updates on match day
-    if booking.booking_date != Date.today
-      return render json: { 
-        error: "Status can only be updated on the match day" 
-      }, status: :unprocessable_entity
-    end
-
     booking.update!(
-      umpire_reached:  params[:umpire_reached].present? ? params[:umpire_reached] : booking.umpire_reached,
+      umpire_arranged: params[:umpire_arranged].present? ? params[:umpire_arranged] : booking.umpire_arranged,
       water_arranged:  params[:water_arranged].present? ? params[:water_arranged] : booking.water_arranged,
       balls_ready:     params[:balls_ready].present? ? params[:balls_ready] : booking.balls_ready,
       ground_ready:    params[:ground_ready].present? ? params[:ground_ready] : booking.ground_ready
@@ -218,12 +196,22 @@ class BookingsController < ApplicationController
     render json: bookings.as_json(include: [:ground, :slot, :user]), status: :ok
   end
 
-  # Today's confirmed bookings for match day dashboard
   def today
     today = Date.today.to_s
     bookings = Booking.includes(:ground, :slot, :user)
       .where(booking_date: today, status: "confirmed")
       .order("slots.start_time ASC")
+    render json: bookings.as_json(include: [:ground, :slot, :user]), status: :ok
+  end
+
+  def upcoming
+    start_date = Date.today
+    end_date = 3.days.from_now.to_date
+    
+    bookings = Booking.includes(:ground, :slot, :user)
+      .where(booking_date: start_date..end_date, status: "confirmed")
+      .order(booking_date: :asc)
+    
     render json: bookings.as_json(include: [:ground, :slot, :user]), status: :ok
   end
 
