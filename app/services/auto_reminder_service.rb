@@ -8,10 +8,12 @@ class AutoReminderService
     reminder_window_start = target_time - 30.minutes
     reminder_window_end = target_time + 30.minutes
     
-    bookings = Booking.includes(:ground, :slot, :user)
+    # Use proper joins to access slots table
+    bookings = Booking.joins(:slot)
+                      .includes(:ground, :slot, :user)
                       .where(status: "confirmed")
                       .where(reminder_sent: false)
-                      .where("booking_date = ? AND slots.start_time >= ? AND slots.start_time <= ?", 
+                      .where("bookings.booking_date = ? AND slots.start_time >= ? AND slots.start_time <= ?", 
                              target_time.to_date,
                              reminder_window_start.strftime("%H:%M"),
                              reminder_window_end.strftime("%H:%M"))
