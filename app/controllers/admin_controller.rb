@@ -1,5 +1,5 @@
 class AdminController < ApplicationController
-  before_action :authenticate_request
+  before_action :authenticate_request, except: [:trigger_auto_reminders]
 
   def stats
     total_grounds = Ground.count
@@ -105,10 +105,9 @@ class AdminController < ApplicationController
     }, status: :ok
   end
 
-
   def trigger_auto_reminders
-  AutoReminderJob.perform_later
-  render json: { message: "Auto reminder job triggered successfully" }, status: :ok
+    AutoReminderJob.perform_later
+    render json: { message: "Auto reminder job triggered successfully" }, status: :ok
   end
 
   def update_role
@@ -131,5 +130,4 @@ class AdminController < ApplicationController
       }
     }, status: :ok
   end
-
 end
