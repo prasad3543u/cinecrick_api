@@ -11,7 +11,7 @@ class AutoReminderService
     bookings = Booking.includes(:ground, :slot, :user)
                       .where(status: "confirmed")
                       .where(reminder_sent: false)
-                      .where("booking_date = ? AND start_time >= ? AND start_time <= ?", 
+                      .where("booking_date = ? AND slots.start_time >= ? AND slots.start_time <= ?", 
                              target_time.to_date,
                              reminder_window_start.strftime("%H:%M"),
                              reminder_window_end.strftime("%H:%M"))
@@ -102,8 +102,5 @@ class AutoReminderService
   
   def self.send_whatsapp(phone, message)
     Rails.logger.info "WhatsApp to #{phone}: #{message}"
-    # In production with WhatsApp Business API, uncomment:
-    # client = WhatsAppClient.new
-    # client.send_message(phone, message)
   end
 end
