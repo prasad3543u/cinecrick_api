@@ -215,6 +215,12 @@ class BookingsController < ApplicationController
     render json: bookings.as_json(include: [:ground, :slot, :user]), status: :ok
   end
 
+  def reset_reminder
+    booking = Booking.find(params[:id])
+    booking.update(reminder_sent: false, reminder_sent_at: nil)
+    render json: { message: "Reminder Status Reset"}, status: :ok
+  end
+  
   private
 
   def booking_params

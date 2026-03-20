@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_20_092256) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_20_095748) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,6 +24,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_20_092256) do
     t.string "groundsman_phone"
     t.string "match_type"
     t.string "payment_status"
+    t.boolean "reminder_sent", default: false
+    t.datetime "reminder_sent_at"
     t.bigint "slot_id", null: false
     t.string "status"
     t.decimal "total_price"

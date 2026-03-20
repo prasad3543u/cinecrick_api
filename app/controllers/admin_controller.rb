@@ -105,6 +105,12 @@ class AdminController < ApplicationController
     }, status: :ok
   end
 
+
+  def trigger_auto_reminders
+  AutoReminderJob.perform_later
+  render json: { message: "Auto reminder job triggered successfully" }, status: :ok
+  end
+
   def update_role
     user = User.find(params[:id])
 

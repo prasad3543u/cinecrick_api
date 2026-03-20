@@ -33,4 +33,7 @@ Rails.application.routes.draw do
   get "/admin/blocked_dates",   to: "admin#blocked_dates"
   get "/admin/users",           to: "admin#users"
   patch "/admin/users/:id/update_role", to: "admin#update_role"
+  post "/admin/trigger_auto_reminders", to: "admin#trigger_auto_reminders"
+  patch "/admin/bookings/:id/reset_reminder", to: "bookings#reset_reminder"   
+  
 end

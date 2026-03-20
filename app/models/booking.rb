@@ -5,9 +5,12 @@ class Booking < ApplicationRecord
 
   validates :booking_date, :total_price, :status, presence: true
   
-  # Add validation to prevent duplicate bookings
   validate :user_cannot_book_same_slot_twice, on: :create
   validate :slot_must_be_available, on: :create
+  
+  # Scopes for reminder tracking
+  scope :reminders_not_sent, -> { where(reminder_sent: false) }
+  scope :reminders_sent, -> { where(reminder_sent: true) }
 
   private
 
