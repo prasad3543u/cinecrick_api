@@ -33,6 +33,7 @@ Rails.application.routes.draw do
   delete "/admin/unblock_date", to: "admin#unblock_date"
   get "/admin/blocked_dates",   to: "admin#blocked_dates"
   get "/admin/users",           to: "admin#users"
+  get "/admin/trigger_auto_reminders", to: "admin#trigger_auto_reminders"
   patch "/admin/users/:id/update_role", to: "admin#update_role"
   
   # Auto reminder endpoints
