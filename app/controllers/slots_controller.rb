@@ -78,6 +78,10 @@ end
 
   def destroy
     slot = Slot.find(params[:id])
+
+    if slot.bookings.exists?
+      return render json: { error: "Cannot delete slot with existing bookings" }, status: :unprocessable_entity
+    end     
     slot.destroy
     render json: { message: "Slot deleted successfully" }, status: :ok
   end
