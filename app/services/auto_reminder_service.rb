@@ -4,11 +4,9 @@ class AutoReminderService
     now = Time.current
     target_time = now + 12.hours
     
-    # Find matches where match time is within the next hour window
     reminder_window_start = target_time - 30.minutes
     reminder_window_end = target_time + 30.minutes
     
-    # Use proper joins to access slots table
     bookings = Booking.joins(:slot)
                       .includes(:ground, :slot, :user)
                       .where(status: "confirmed")
@@ -25,7 +23,8 @@ class AutoReminderService
       if booking.ground.admin_phone.present?
         admin_number = booking.ground.admin_phone.gsub(/\D/, '')
         admin_message = build_admin_message(booking)
-        send_whatsapp(admin_number, admin_message)
+        url = send_whatsapp(admin_number, admin_message)
+        Rails.logger.info "Admin WhatsApp URL: #{url}"
         sent_count[:admin] += 1
       end
       
@@ -33,11 +32,11 @@ class AutoReminderService
       if booking.user.phone.present?
         user_number = booking.user.phone.gsub(/\D/, '')
         user_message = build_user_message(booking)
-        send_whatsapp(user_number, user_message)
+        url = send_whatsapp(user_number, user_message)
+        Rails.logger.info "User WhatsApp URL: #{url}"
         sent_count[:user] += 1
       end
       
-      # Mark as sent to avoid duplicates
       booking.update(reminder_sent: true, reminder_sent_at: Time.current)
     end
     
@@ -103,6 +102,15 @@ class AutoReminderService
   end
   
   def self.send_whatsapp(phone, message)
-    Rails.logger.info "WhatsApp to #{phone}: #{message}"
+    number = phone.gsub(/\D/, '')
+    url = "https://wa.me/#{number}?text=#{CGI.escape(message)}"
+    
+    Rails.logger.info "=" * 50
+    Rails.logger.info "WHATSAPP REMINDER"
+    Rails.logger.info "Phone: #{phone}"
+    Rails.logger.info "URL: #{url}"
+    Rails.logger.info "=" * 50
+    
+    url
   end
 end
