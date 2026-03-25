@@ -1,4 +1,5 @@
-class AIController < ApplicationController
+
+class AiController < ApplicationController
   def chat
     message = params[:message]
     
@@ -11,3 +12,4 @@ class AIController < ApplicationController
     render json: { response: response }, status: :ok
   end
 end
+
