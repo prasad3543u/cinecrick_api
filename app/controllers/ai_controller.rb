@@ -1,15 +1,17 @@
 # app/controllers/ai_controller.rb
 class AIController < ApplicationController
-  before_action :authenticate_request
-  skip_before_action :verify_authenticity_token
+  skip_before_action :authenticate_request, only: [:chat]
 
   def chat
     message = params[:message]
-    ai = GeminiAIService.new
-    response = ai.chat(message, { user: current_user.email })
     
+    if message.blank?
+      return render json: { error: "Message is required" }, status: :unprocessable_entity
+    end
+
+    # Simple response (will be replaced with Gemini later)
+    response = "I'm your CrickOps assistant! I can help you find cricket grounds, check availability, and answer booking questions. How can I help you today?"
+
     render json: { response: response }, status: :ok
-  rescue => e
-    render json: { error: e.message }, status: :unprocessable_entity
   end
 end
