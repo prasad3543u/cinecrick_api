@@ -35,6 +35,8 @@ Rails.application.routes.draw do
   get "/admin/users",           to: "admin#users"
   get "/admin/trigger_auto_reminders", to: "admin#trigger_auto_reminders"
   patch "/admin/users/:id/update_role", to: "admin#update_role"
+  post "/ai/chat", to: "ai#chat"
+  
   
   # Auto reminder endpoints
   post "/admin/trigger_auto_reminders", to: "admin#trigger_auto_reminders"
