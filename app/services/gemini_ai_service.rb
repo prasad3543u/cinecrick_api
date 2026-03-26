@@ -1,26 +1,22 @@
 require 'httparty'
 
 class GeminiAiService
-  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+  # Correct model name that works with free tier
+  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
 
   def initialize
     @api_key = ENV['GEMINI_API_KEY']
   end
 
   def chat(message, user_context = {})
-    # Debug logging
     Rails.logger.info "=== GEMINI DEBUG ==="
     Rails.logger.info "API Key present: #{@api_key.present?}"
-    Rails.logger.info "API Key starts with AIza: #{@api_key.to_s.start_with?('AIza')}" if @api_key.present?
-    Rails.logger.info "Message: #{message}"
     
-    # If no API key, use smart fallback
     if @api_key.blank?
       Rails.logger.info "No API key - using fallback"
       return smart_fallback(message)
     end
 
-    # Get real data from database
     grounds_data = get_grounds_data
     bookings_data = get_bookings_data
     
@@ -60,7 +56,7 @@ class GeminiAiService
     PROMPT
 
     begin
-      Rails.logger.info "Calling Gemini API..."
+      Rails.logger.info "Calling Gemini API with model: gemini-2.0-flash-exp"
       response = HTTParty.post(
         "#{API_URL}?key=#{@api_key}",
         headers: { "Content-Type" => "application/json" },
@@ -78,7 +74,7 @@ class GeminiAiService
       if response.success?
         result = response.parsed_response
         ai_response = result.dig("candidates", 0, "content", "parts", 0, "text")
-        Rails.logger.info "Gemini Response: #{ai_response}"
+        Rails.logger.info "Gemini Response received successfully"
         ai_response.present? ? ai_response : smart_fallback(message)
       else
         Rails.logger.error "Gemini API Error: #{response.body}"
@@ -111,13 +107,10 @@ class GeminiAiService
 
   def smart_fallback(message)
     msg = message.downcase
-    
-    # Get real grounds
     grounds = Ground.all
     
     # Check for price-based queries
     if msg.include?("ground") && (msg.include?("under") || msg.include?("below") || msg.include?("around"))
-      # Extract price from message
       price_match = msg.match(/(\d+)/)
       if price_match && grounds.any?
         max_price = price_match[1].to_i
@@ -153,27 +146,6 @@ class GeminiAiService
           response += "• #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}\n"
         end
         return response
-      end
-    end
-    
-    # Check for location-based query
-    if msg.include?("bangalore") || msg.include?("btm") || msg.include?("location")
-      if grounds.any?
-        location_grounds = grounds.select { |g| g.location.downcase.include?(msg) }
-        if location_grounds.any?
-          response = "Grounds in #{msg}:\n"
-          location_grounds.each do |g|
-            response += "• #{g.name}: ₹#{g.price_per_hour}/hour\n"
-          end
-          return response
-        end
-      end
-    end
-    
-    # Check for specific ground by name
-    grounds.each do |g|
-      if msg.include?(g.name.downcase)
-        return "#{g.name}: ₹#{g.price_per_hour}/hour at #{g.location}. #{g.amenities || 'Good amenities'}."
       end
     end
     
