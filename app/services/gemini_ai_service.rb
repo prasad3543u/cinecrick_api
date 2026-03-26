@@ -1,23 +1,18 @@
 require 'httparty'
 
 class GeminiAiService
-  # Try the stable model first
-  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-
   def initialize
     @api_key = ENV['GEMINI_API_KEY']
   end
 
   def chat(message, user_context = {})
-    Rails.logger.info "=== GEMINI DEBUG ==="
-    Rails.logger.info "API Key present: #{@api_key.present?}"
-    Rails.logger.info "API Key starts with AIza: #{@api_key.to_s.start_with?('AIza')}" if @api_key.present?
-    
+    # If no API key, use smart fallback
     if @api_key.blank?
       Rails.logger.info "No API key - using fallback"
       return smart_fallback(message)
     end
 
+    # Get real data from database
     grounds_data = get_grounds_data
     bookings_data = get_bookings_data
     
@@ -47,19 +42,23 @@ class GeminiAiService
       USER QUESTION: "#{message}"
 
       RULES:
-      1. Use ONLY the REAL GROUNDS DATA above.
-      2. Be specific with ground names and prices.
+      1. Use ONLY the REAL GROUNDS DATA above. Don't make up grounds.
+      2. Be specific with ground names, locations, and actual prices.
       3. Keep response under 150 words.
-      4. Be friendly.
+      4. Be friendly and helpful.
 
       YOUR RESPONSE:
     PROMPT
 
     begin
-      Rails.logger.info "Calling Gemini API..."
+      # Use the latest stable Gemini 2.0 Flash model
+      model = "gemini-2.0-flash-001"
+      url = "https://generativelanguage.googleapis.com/v1beta/models/#{model}:generateContent?key=#{@api_key}"
+      
+      Rails.logger.info "Calling Gemini API with model: #{model}"
       
       response = HTTParty.post(
-        "#{API_URL}?key=#{@api_key}",
+        url,
         headers: { "Content-Type" => "application/json" },
         body: {
           contents: [{
@@ -68,12 +67,10 @@ class GeminiAiService
         }.to_json
       )
 
-      Rails.logger.info "Gemini Response Code: #{response.code}"
-      
       if response.success?
         result = response.parsed_response
         ai_response = result.dig("candidates", 0, "content", "parts", 0, "text")
-        Rails.logger.info "Gemini Response: #{ai_response}"
+        Rails.logger.info "Gemini Response received successfully"
         ai_response.present? ? ai_response : smart_fallback(message)
       else
         Rails.logger.error "Gemini API Error: #{response.body}"
@@ -91,7 +88,7 @@ class GeminiAiService
     grounds = Ground.all
     if grounds.any?
       grounds.map do |g|
-        "- #{g.name}: ₹#{g.price_per_hour}/hour, Location: #{g.location}"
+        "- #{g.name}: ₹#{g.price_per_hour}/hour, Location: #{g.location}, Amenities: #{g.amenities || 'Basic'}"
       end.join("\n")
     else
       "No grounds added yet."
@@ -105,8 +102,8 @@ class GeminiAiService
   end
 
   def smart_fallback(message)
-    # ... your existing smart_fallback code
     grounds = Ground.all
+    
     if grounds.any?
       top_grounds = grounds.first(3)
       response = "Here are top grounds:\n"
