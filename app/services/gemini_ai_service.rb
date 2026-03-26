@@ -63,7 +63,11 @@ class GeminiAiService
         body: {
           contents: [{
             parts: [{ text: prompt }]
-          }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500
+          }
         }.to_json
       )
 
@@ -102,17 +106,56 @@ class GeminiAiService
   end
 
   def smart_fallback(message)
+    msg = message.downcase
     grounds = Ground.all
     
     if grounds.any?
+      # Check for price-based queries
+      if msg.include?("under") || msg.include?("around") || msg.include?("below")
+        price_match = msg.match(/(\d+)/)
+        if price_match
+          max_price = price_match[1].to_i
+          affordable = grounds.select { |g| g.price_per_hour <= max_price }
+          if affordable.any?
+            response = "Grounds under ₹#{max_price}:\n"
+            affordable.each do |g|
+              response += "• #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}\n"
+            end
+            return response
+          else
+            cheapest = grounds.min_by(&:price_per_hour)
+            return "No grounds under ₹#{max_price}. The cheapest ground is #{cheapest.name} at ₹#{cheapest.price_per_hour}/hour in #{cheapest.location}."
+          end
+        end
+      end
+      
+      # Check for cheapest ground
+      if msg.include?("cheapest") || (msg.include?("best") && msg.include?("price"))
+        cheapest = grounds.min_by(&:price_per_hour)
+        return "The cheapest ground is #{cheapest.name} at ₹#{cheapest.price_per_hour}/hour in #{cheapest.location}."
+      end
+      
+      # Check for specific location
+      if msg.include?("bangalore") || msg.include?("btm") || msg.include?("varthur") || msg.include?("sarjapura")
+        location_grounds = grounds.select { |g| g.location.downcase.include?(msg.match(/\w+/).to_s) }
+        if location_grounds.any?
+          response = "Grounds in #{msg.match(/\w+/)}:\n"
+          location_grounds.each do |g|
+            response += "• #{g.name}: ₹#{g.price_per_hour}/hour\n"
+          end
+          return response
+        end
+      end
+      
+      # Default recommendation
       top_grounds = grounds.first(3)
-      response = "Here are top grounds:\n"
+      response = "Here are top grounds near Bangalore:\n"
       top_grounds.each do |g|
         response += "• #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}\n"
       end
       response
     else
-      "No grounds available yet."
+      "No grounds available yet. Check back soon!"
     end
   end
 end
