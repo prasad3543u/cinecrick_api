@@ -6,13 +6,19 @@ class GeminiAiService
   end
 
   def chat(message, user_context = {})
-    # If no API key, use smart fallback
-    if @api_key.blank?
-      Rails.logger.info "No API key - using fallback"
-      return smart_fallback(message)
+    # Always try Gemini first if API key exists
+    if @api_key.present?
+      result = try_gemini(message, user_context)
+      return result if result.present?
     end
+    
+    # Fallback to smart responses if Gemini fails or no API key
+    smart_fallback(message)
+  end
 
-    # Get real data from database
+  private
+
+  def try_gemini(message, user_context)
     grounds_data = get_grounds_data
     bookings_data = get_bookings_data
     
@@ -51,7 +57,7 @@ class GeminiAiService
     PROMPT
 
     begin
-      # Use the latest stable Gemini 2.0 Flash model
+      # Use the stable Gemini model
       model = "gemini-2.0-flash-001"
       url = "https://generativelanguage.googleapis.com/v1beta/models/#{model}:generateContent?key=#{@api_key}"
       
@@ -75,18 +81,18 @@ class GeminiAiService
         result = response.parsed_response
         ai_response = result.dig("candidates", 0, "content", "parts", 0, "text")
         Rails.logger.info "Gemini Response received successfully"
-        ai_response.present? ? ai_response : smart_fallback(message)
+        return ai_response if ai_response.present?
       else
         Rails.logger.error "Gemini API Error: #{response.body}"
-        smart_fallback(message)
+        return nil
       end
     rescue => e
       Rails.logger.error "Gemini Error: #{e.message}"
-      smart_fallback(message)
+      return nil
     end
+    
+    nil
   end
-
-  private
 
   def get_grounds_data
     grounds = Ground.all
@@ -95,7 +101,7 @@ class GeminiAiService
         "- #{g.name}: ₹#{g.price_per_hour}/hour, Location: #{g.location}, Amenities: #{g.amenities || 'Basic'}"
       end.join("\n")
     else
-      "No grounds added yet."
+      "No grounds added yet. Admin can add grounds in admin panel."
     end
   end
 
@@ -136,20 +142,23 @@ class GeminiAiService
       end
       
       # Check for specific location
-      if msg.include?("bangalore") || msg.include?("btm") || msg.include?("varthur") || msg.include?("sarjapura")
-        location_grounds = grounds.select { |g| g.location.downcase.include?(msg.match(/\w+/).to_s) }
-        if location_grounds.any?
-          response = "Grounds in #{msg.match(/\w+/)}:\n"
-          location_grounds.each do |g|
-            response += "• #{g.name}: ₹#{g.price_per_hour}/hour\n"
+      locations = ["bangalore", "btm", "varthur", "sarjapura", "whitefield", "indiranagar", "koramangala"]
+      locations.each do |loc|
+        if msg.include?(loc)
+          location_grounds = grounds.select { |g| g.location.downcase.include?(loc) }
+          if location_grounds.any?
+            response = "Grounds in #{loc.capitalize}:\n"
+            location_grounds.each do |g|
+              response += "• #{g.name}: ₹#{g.price_per_hour}/hour\n"
+            end
+            return response
           end
-          return response
         end
       end
       
-      # Default recommendation
+      # Default recommendation - top 3 grounds
       top_grounds = grounds.first(3)
-      response = "Here are top grounds near Bangalore:\n"
+      response = "Here are top grounds near you:\n"
       top_grounds.each do |g|
         response += "• #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}\n"
       end
