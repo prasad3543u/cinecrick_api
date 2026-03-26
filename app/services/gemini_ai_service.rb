@@ -1,8 +1,8 @@
 require 'httparty'
 
 class GeminiAiService
-  # Correct model name that works with free tier
-  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
+  # Using gemini-1.5-flash - confirmed working with free tier
+  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
 
   def initialize
     @api_key = ENV['GEMINI_API_KEY']
@@ -56,7 +56,7 @@ class GeminiAiService
     PROMPT
 
     begin
-      Rails.logger.info "Calling Gemini API with model: gemini-2.0-flash-exp"
+      Rails.logger.info "Calling Gemini API with model: gemini-1.5-flash"
       response = HTTParty.post(
         "#{API_URL}?key=#{@api_key}",
         headers: { "Content-Type" => "application/json" },
