@@ -8,8 +8,15 @@ class GeminiAiService
   end
 
   def chat(message, user_context = {})
+    # Debug logging
+    Rails.logger.info "=== GEMINI DEBUG ==="
+    Rails.logger.info "API Key present: #{@api_key.present?}"
+    Rails.logger.info "API Key starts with AIza: #{@api_key.to_s.start_with?('AIza')}" if @api_key.present?
+    Rails.logger.info "Message: #{message}"
+    
     # If no API key, use smart fallback
     if @api_key.blank?
+      Rails.logger.info "No API key - using fallback"
       return smart_fallback(message)
     end
 
@@ -53,6 +60,7 @@ class GeminiAiService
     PROMPT
 
     begin
+      Rails.logger.info "Calling Gemini API..."
       response = HTTParty.post(
         "#{API_URL}?key=#{@api_key}",
         headers: { "Content-Type" => "application/json" },
@@ -70,8 +78,10 @@ class GeminiAiService
       if response.success?
         result = response.parsed_response
         ai_response = result.dig("candidates", 0, "content", "parts", 0, "text")
+        Rails.logger.info "Gemini Response: #{ai_response}"
         ai_response.present? ? ai_response : smart_fallback(message)
       else
+        Rails.logger.error "Gemini API Error: #{response.body}"
         smart_fallback(message)
       end
     rescue => e
