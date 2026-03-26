@@ -6,53 +6,130 @@ class HuggingFaceService
   end
 
   def chat(message, user_context = {})
-    # Use free model (no API key required for some)
-    model = "microsoft/DialoGPT-small"
-    url = "https://api-inference.huggingface.co/models/#{model}"
+    # Get real data from database for context
+    grounds_data = get_grounds_data
+    bookings_data = get_bookings_data
     
-    headers = { "Content-Type" => "application/json" }
-    headers["Authorization"] = "Bearer #{@api_key}" if @api_key.present?
-    
-    begin
-      response = HTTParty.post(
-        url,
-        headers: headers,
-        body: { inputs: message }.to_json,
-        timeout: 10
-      )
+    prompt = <<~PROMPT
+      You are CrickOps AI Assistant. Answer using ONLY the REAL DATA below.
 
-      if response.success?
-        result = response.parsed_response
-        if result.is_a?(Array) && result[0].present?
-          ai_response = result[0]["generated_text"]
-          return ai_response if ai_response.present?
-        end
-      end
-    rescue => e
-      Rails.logger.error "HuggingFace Error: #{e.message}"
-    end
+      REAL GROUNDS DATA:
+      #{grounds_data}
+
+      REAL BOOKINGS DATA:
+      #{bookings_data}
+
+      CANCELLATION POLICY:
+      - Cancel >3 days before match: 100% refund
+      - Cancel 2-3 days before: 25% refund
+      - Cancel <48 hours: No refund
+
+      PRICING:
+      - Weekdays (Mon-Fri): ₹2500 per 3-hour slot
+      - Weekends (Sat-Sun): Morning ₹4000, Mid-Day ₹3500, Evening ₹3000
+      - Without Opponents: 2x price
+
+      SLOT TIMINGS:
+      - Morning: 06:30 AM - 09:30 AM
+      - Mid-Day: 09:30 AM - 12:30 PM
+      - Evening: 01:00 PM - 06:00 PM
+
+      USER QUESTION: "#{message}"
+
+      RULES:
+      1. Use ONLY the REAL DATA above. Never make up data.
+      2. If asked about grounds, mention specific names, prices, locations.
+      3. If asked about cheapest, find from the data.
+      4. Be friendly and conversational.
+
+      YOUR RESPONSE:
+    PROMPT
+
+    # Try Gemini first
+    gemini_response = try_gemini(prompt)
+    return gemini_response if gemini_response.present?
     
-    # Fallback
-    smart_fallback(message)
+    # Try Hugging Face second
+    hf_response = try_huggingface(prompt)
+    return hf_response if hf_response.present?
+    
+    # If both fail
+    "I'm having trouble connecting. Please try again later."
   end
 
   private
 
-  def smart_fallback(message)
-    msg = message.downcase
-    grounds = Ground.all
+  def try_gemini(prompt)
+    api_key = ENV['GEMINI_API_KEY']
+    return nil if api_key.blank?
     
-    if msg.include?("book a slot") || msg.include?("how to book")
-      return "To book a slot: Go to Grounds → Select ground → Pick date/time → Click 'Book Now'"
-    elsif msg.include?("cancel") || msg.include?("refund")
-      return "Cancel >3 days: 100% refund, 2-3 days: 25% refund, <48h: no refund"
-    elsif msg.include?("price") && grounds.any?
-      return "Prices range from ₹#{grounds.minimum(:price_per_hour)} to ₹#{grounds.maximum(:price_per_hour)}/hour"
-    elsif msg.include?("ground") && grounds.any?
-      top = grounds.first(3)
-      return "Top grounds:\n" + top.map { |g| "• #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}" }.join("\n")
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=#{api_key}"
+    
+    response = HTTParty.post(
+      url,
+      headers: { "Content-Type" => "application/json" },
+      body: {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+      }.to_json
+    )
+    
+    if response.success?
+      result = response.parsed_response
+      result.dig("candidates", 0, "content", "parts", 0, "text")
     else
-      return "I'm your CrickOps assistant! I can help with bookings, cancellations, pricing, and finding grounds."
+      nil
     end
+  rescue => e
+    Rails.logger.error "Gemini Error: #{e.message}"
+    nil
+  end
+
+  def try_huggingface(prompt)
+    api_key = ENV['HF_API_KEY']
+    model = "microsoft/DialoGPT-medium"
+    url = "https://api-inference.huggingface.co/models/#{model}"
+    
+    headers = { "Content-Type" => "application/json" }
+    headers["Authorization"] = "Bearer #{api_key}" if api_key.present?
+    
+    response = HTTParty.post(
+      url,
+      headers: headers,
+      body: { inputs: prompt }.to_json,
+      timeout: 10
+    )
+    
+    if response.success?
+      result = response.parsed_response
+      if result.is_a?(Array) && result[0].present?
+        ai_response = result[0]["generated_text"]
+        if ai_response.include?("YOUR RESPONSE:")
+          ai_response = ai_response.split("YOUR RESPONSE:").last.strip
+        end
+        return ai_response
+      end
+    end
+    nil
+  rescue => e
+    Rails.logger.error "HuggingFace Error: #{e.message}"
+    nil
+  end
+
+  def get_grounds_data
+    grounds = Ground.all
+    if grounds.any?
+      grounds.map do |g|
+        "- #{g.name}: ₹#{g.price_per_hour}/hour, Location: #{g.location}"
+      end.join("\n")
+    else
+      "No grounds added yet."
+    end
+  end
+
+  def get_bookings_data
+    total = Booking.count
+    confirmed = Booking.where(status: "confirmed").count
+    "Total Bookings: #{total}, Confirmed: #{confirmed}"
   end
 end
