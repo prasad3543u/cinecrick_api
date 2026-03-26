@@ -1,7 +1,7 @@
 require 'httparty'
 
 class GeminiAiService
-  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+  API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
 
   def initialize
     @api_key = ENV['GEMINI_API_KEY']
