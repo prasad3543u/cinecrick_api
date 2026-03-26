@@ -58,38 +58,48 @@ class HuggingFaceService
       YOUR RESPONSE:
     PROMPT
 
-    # Call Hugging Face API
-    url = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+    # Try working models in order
+    models = [
+      "google/flan-t5-small",
+      "facebook/blenderbot-400M-distill"
+    ]
     
-    begin
-      response = HTTParty.post(
-        url,
-        headers: {
-          "Authorization" => "Bearer #{@api_key}",
-          "Content-Type" => "application/json"
-        },
-        body: { inputs: prompt }.to_json,
-        timeout: 15
-      )
+    models.each do |model|
+      url = "https://api-inference.huggingface.co/models/#{model}"
+      
+      begin
+        response = HTTParty.post(
+          url,
+          headers: {
+            "Authorization" => "Bearer #{@api_key}",
+            "Content-Type" => "application/json"
+          },
+          body: { inputs: prompt }.to_json,
+          timeout: 15
+        )
 
-      if response.success?
-        result = response.parsed_response
-        if result.is_a?(Array) && result[0].present?
-          ai_response = result[0]["generated_text"]
-          # Clean up the response - remove the prompt part
-          if ai_response.include?("YOUR RESPONSE:")
-            ai_response = ai_response.split("YOUR RESPONSE:").last.strip
+        if response.code == 200
+          result = response.parsed_response
+          if result.is_a?(Array) && result[0].present?
+            ai_response = result[0]["generated_text"]
+            # Clean up the response
+            if ai_response.include?("YOUR RESPONSE:")
+              ai_response = ai_response.split("YOUR RESPONSE:").last.strip
+            end
+            return ai_response if ai_response.present?
           end
-          return ai_response
         else
-          return "I couldn't generate a response. Please try again."
+          # Try next model
+          next
         end
-      else
-        return "Hugging Face API error: #{response.code}. Please try again later."
+      rescue => e
+        # Error with this model, try next
+        next
       end
-    rescue => e
-      return "Error: #{e.message}. Please try again."
     end
+    
+    # If all models fail
+    "Hugging Face AI is currently unavailable. Please try again later."
   end
 
   private
@@ -101,7 +111,7 @@ class HuggingFaceService
         "- #{g.name}: ₹#{g.price_per_hour}/hour, Location: #{g.location}"
       end.join("\n")
     else
-      "No grounds added yet. Admin can add grounds in the admin panel."
+      "No grounds added yet."
     end
   end
 
