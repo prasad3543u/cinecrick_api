@@ -2,78 +2,53 @@ require 'httparty'
 
 class HuggingFaceService
   def initialize
-    @api_key = ENV['HF_API_KEY']
+    @api_key = ENV['GEMINI_API_KEY']
   end
 
   def chat(message, user_context = {})
-    # Check if API key exists
     if @api_key.blank?
-      return "Hugging Face API key not configured. Please add HF_API_KEY in Render environment variables."
+      return "Gemini API key not configured. Please add GEMINI_API_KEY in Render."
     end
 
-    # Get real data from your database
+    # Get real data from database
     grounds_data = get_grounds_data
     bookings_data = get_bookings_data
     
-    # Build the prompt with real data
     prompt = <<~PROMPT
-      You are CrickOps AI Assistant. Answer using ONLY the REAL DATA below.
+      You are CrickOps AI Assistant. Answer based on REAL DATA below.
 
-      REAL GROUNDS DATA:
+      GROUNDS:
       #{grounds_data}
 
-      REAL BOOKINGS DATA:
+      BOOKINGS:
       #{bookings_data}
 
-      CANCELLATION POLICY:
-      - Cancel >3 days before match: 100% refund
-      - Cancel 2-3 days before: 25% refund
-      - Cancel <48 hours: No refund
+      CANCELLATION: Cancel >3 days: 100% refund. 2-3 days: 25% refund. <48h: no refund.
+      PRICING: Weekdays ₹2500, Weekends ₹3000-4000, Without Opponents: 2x price.
 
-      PRICING:
-      - Weekdays: ₹2500 per slot
-      - Weekends: ₹3000-4000 per slot
-      - Without Opponents: 2x price
+      USER: "#{message}"
 
-      USER QUESTION: "#{message}"
-
-      RULES:
-      1. Use ONLY the REAL DATA above.
-      2. Be friendly and helpful.
-
-      YOUR RESPONSE:
+      Answer concisely using only the data above:
     PROMPT
 
-    # NEW: Use the correct Hugging Face API URL
-    url = "https://router.huggingface.co/hf-inference/models/google/flan-t5-small"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=#{@api_key}"
     
-    begin
-      response = HTTParty.post(
-        url,
-        headers: {
-          "Authorization" => "Bearer #{@api_key}",
-          "Content-Type" => "application/json"
-        },
-        body: { inputs: prompt }.to_json,
-        timeout: 15
-      )
+    response = HTTParty.post(
+      url,
+      headers: { "Content-Type" => "application/json" },
+      body: {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+      }.to_json
+    )
 
-      if response.code == 200
-        result = response.parsed_response
-        if result.is_a?(Array) && result[0].present?
-          ai_response = result[0]["generated_text"]
-          return ai_response if ai_response.present?
-        elsif result.is_a?(String)
-          return result
-        else
-          return "I couldn't generate a response. Please try again."
-        end
-      else
-        return "Hugging Face API error: #{response.code}. Please try again later."
-      end
-    rescue => e
-      return "Error: #{e.message}. Please try again."
+    if response.success?
+      result = response.parsed_response
+      ai_response = result.dig("candidates", 0, "content", "parts", 0, "text")
+      return ai_response if ai_response.present?
     end
+    
+    "Gemini API error. Please try again later."
   end
 
   private
@@ -81,17 +56,13 @@ class HuggingFaceService
   def get_grounds_data
     grounds = Ground.all
     if grounds.any?
-      grounds.map do |g|
-        "- #{g.name}: ₹#{g.price_per_hour}/hour, Location: #{g.location}"
-      end.join("\n")
+      grounds.map { |g| "- #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}" }.join("\n")
     else
-      "No grounds added yet."
+      "No grounds yet."
     end
   end
 
   def get_bookings_data
-    total = Booking.count
-    confirmed = Booking.where(status: "confirmed").count
-    "Total Bookings: #{total}, Confirmed: #{confirmed}"
+    "Total: #{Booking.count}, Confirmed: #{Booking.where(status: 'confirmed').count}"
   end
 end
