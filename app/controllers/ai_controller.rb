@@ -17,20 +17,44 @@ class AiController < ApplicationController
       render json: { response: response }, status: :ok
     rescue => e
       Rails.logger.error "AI Error: #{e.message}"
-      render json: { response: fallback_response(message) }, status: :ok
+      render json: { response: smart_fallback(message) }, status: :ok
     end
   end
 
   private
 
-  def fallback_response(message)
+  def smart_fallback(message)
     msg = message.downcase
-    if msg.include?("ground")
-      "We have #{Ground.count} cricket grounds available! Check the Grounds page to explore."
-    elsif msg.include?("cancel")
-      "You can cancel up to 48 hours before match. 100% refund >3 days, 25% refund 2-3 days."
+    grounds = Ground.all
+    
+    # Price-based query
+    if msg.include?("under") || msg.include?("around")
+      price_match = msg.match(/(\d+)/)
+      if price_match && grounds.any?
+        max_price = price_match[1].to_i
+        affordable = grounds.select { |g| g.price_per_hour <= max_price }
+        if affordable.any?
+          response = "Grounds under ₹#{max_price}:\n"
+          affordable.each { |g| response += "• #{g.name}: ₹#{g.price_per_hour}/hour at #{g.location}\n" }
+          return response
+        else
+          cheapest = grounds.min_by(&:price_per_hour)
+          return "No grounds under ₹#{max_price}. Cheapest is #{cheapest.name} at ₹#{cheapest.price_per_hour}/hour."
+        end
+      end
+    end
+    
+    # Cheapest ground
+    if msg.include?("cheapest") && grounds.any?
+      cheapest = grounds.min_by(&:price_per_hour)
+      return "Cheapest ground: #{cheapest.name} at ₹#{cheapest.price_per_hour}/hour in #{cheapest.location}."
+    end
+    
+    # General response with real data
+    if grounds.any?
+      "We have #{grounds.count} grounds. Prices: ₹#{grounds.minimum(:price_per_hour)} - ₹#{grounds.maximum(:price_per_hour)}/hour. What's your budget or location?"
     else
-      "I'm here to help! Ask me about grounds, bookings, prices, or cancellations."
+      "No grounds yet. Check back soon!"
     end
   end
 end
