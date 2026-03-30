@@ -7,17 +7,18 @@ class AiController < ApplicationController
     end
 
     user_context = {
+      user_id: current_user&.id,
       role: current_user&.role,
-      bookings_count: current_user&.bookings&.count || 0
+      email: current_user&.email
     }
 
     begin
-      # Use Hugging Face AI
-      ai_service = HuggingFaceService.new
+      ai_service = AgenticAiService.new
       response = ai_service.chat(message, user_context)
       render json: { response: response }, status: :ok
     rescue => e
-      render json: { response: "Error: #{e.message}" }, status: :ok
+      Rails.logger.error "AI Error: #{e.message}"
+      render json: { response: "I encountered an error. Please try again." }, status: :ok
     end
   end
 end
