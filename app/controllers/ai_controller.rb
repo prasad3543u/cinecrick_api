@@ -9,11 +9,12 @@ class AiController < ApplicationController
     user_context = {
       user_id: current_user&.id,
       role: current_user&.role,
-      email: current_user&.email
+      email: current_user&.email,
+      bookings_count: current_user&.bookings&.count || 0
     }
 
     begin
-      ai_service = AgenticAiService.new
+      ai_service = OpenrouterAiService.new
       response = ai_service.chat(message, user_context)
       render json: { response: response }, status: :ok
     rescue => e

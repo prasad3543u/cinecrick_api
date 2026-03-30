@@ -52,3 +52,5 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 end
 gem 'httparty'
+
+gem "langchainrb", "~> 0.19.5"
