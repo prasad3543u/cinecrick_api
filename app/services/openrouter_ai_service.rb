@@ -56,11 +56,29 @@ class OpenrouterAiService
       3. If asked about cheapest ground, find the lowest price from the data.
       4. If asked about grounds in a location, filter by location.
       5. Be friendly, helpful, and conversational.
-      6. Keep responses concise but informative.
     PROMPT
 
-    model = "google/gemini-2.0-flash-exp:free"
+    # Try multiple free models in order
+    models = [
+      "meta-llama/llama-3.2-3b-instruct:free",
+      "microsoft/phi-3-mini-128k-instruct:free",
+      "mistralai/mistral-7b-instruct:free",
+      "google/gemini-2.0-flash-lite-preview-02-05:free"
+    ]
+    
+    models.each do |model|
+      response = make_api_call(model, system_prompt, message)
+      return response if response
+    end
+    
+    return "All AI models are currently unavailable. Please try again later."
+  rescue => e
+    return "Error: #{e.message}"
+  end
 
+  private
+
+  def make_api_call(model, system_prompt, user_message)
     response = HTTParty.post(
       API_URL,
       headers: {
@@ -73,7 +91,7 @@ class OpenrouterAiService
         model: model,
         messages: [
           { role: "system", content: system_prompt },
-          { role: "user", content: message }
+          { role: "user", content: user_message }
         ],
         temperature: 0.7,
         max_tokens: 500
@@ -81,21 +99,19 @@ class OpenrouterAiService
       timeout: 30
     )
 
-    if response.success?
+    if response.code == 200
       result = response.parsed_response
       if result["choices"] && result["choices"][0]
         return result["choices"][0]["message"]["content"]
-      else
-        return "I couldn't generate a response. Please try again."
       end
-    else
-      return "OpenRouter API error: #{response.code}. #{response.body}"
+    elsif response.code == 404
+      # Model not found, try next
+      return nil
     end
-  rescue => e
-    return "Error: #{e.message}"
+    nil
+  rescue
+    nil
   end
-
-  private
 
   def get_grounds_data
     grounds = Ground.all
