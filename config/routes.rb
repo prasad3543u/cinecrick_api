@@ -36,4 +36,9 @@ Rails.application.routes.draw do
   patch  "/admin/users/:id/update_role",       to: "admin#update_role"
   post   "/admin/trigger_auto_reminders",      to: "admin#trigger_auto_reminders"
   patch  "/admin/bookings/:id/reset_reminder", to: "bookings#reset_reminder"
+
+  # Admin offline bookings (new)
+  namespace :admin do
+    resources :offline_bookings, only: [:new, :create]
+  end
 end

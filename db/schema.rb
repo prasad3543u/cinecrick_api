@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_20_095748) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_31_115716) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -55,6 +55,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_20_095748) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "payment_bookings", force: :cascade do |t|
+    t.decimal "amount"
+    t.bigint "booking_id", null: false
+    t.datetime "created_at", null: false
+    t.text "notes"
+    t.date "payment_date"
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_payment_bookings_on_booking_id"
+  end
+
   create_table "slots", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "end_time"
@@ -67,6 +78,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_20_095748) do
     t.integer "teams_booked_count"
     t.datetime "updated_at", null: false
     t.index ["ground_id"], name: "index_slots_on_ground_id"
+  end
+
+  create_table "staff_payments", force: :cascade do |t|
+    t.decimal "amount"
+    t.bigint "booking_id", null: false
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.date "paid_date"
+    t.string "staff_type"
+    t.string "status"
+    t.datetime "updated_at", null: false
+    t.index ["booking_id"], name: "index_staff_payments_on_booking_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -83,5 +106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_20_095748) do
   add_foreign_key "bookings", "grounds"
   add_foreign_key "bookings", "slots"
   add_foreign_key "bookings", "users"
+  add_foreign_key "payment_bookings", "bookings"
   add_foreign_key "slots", "grounds"
+  add_foreign_key "staff_payments", "bookings"
 end
