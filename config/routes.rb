@@ -41,4 +41,11 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :offline_bookings, only: [:new, :create]
   end
+
+  # Partner routes
+  namespace :partner do
+    get :dashboard
+    post :update_payment
+    post :update_staff_payment
+  end
 end
