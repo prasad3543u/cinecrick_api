@@ -1,9 +1,9 @@
 class PartnersController < ApplicationController
   before_action :authenticate_request
-  before_action :set_partner
+  before_action :set_partner_or_admin
 
   def dashboard
-    grounds = @partner.grounds
+    grounds = @grounds
     bookings = Booking.includes(:ground, :slot, :user)
                       .where(ground_id: grounds.pluck(:id))
                       .order(created_at: :desc)
@@ -23,8 +23,8 @@ class PartnersController < ApplicationController
 
   def update_payment
     booking = Booking.find(params[:booking_id])
-    # Ensure booking belongs to one of partner's grounds
-    unless @partner.grounds.include?(booking.ground)
+    # Ensure booking belongs to a ground that the user has access to
+    unless @grounds.include?(booking.ground)
       return render json: { error: "Unauthorized" }, status: :unauthorized
     end
 
@@ -40,7 +40,7 @@ class PartnersController < ApplicationController
 
   def update_staff_payment
     booking = Booking.find(params[:booking_id])
-    unless @partner.grounds.include?(booking.ground)
+    unless @grounds.include?(booking.ground)
       return render json: { error: "Unauthorized" }, status: :unauthorized
     end
 
@@ -60,8 +60,19 @@ class PartnersController < ApplicationController
 
   private
 
-  def set_partner
-    @partner = Partner.find_by(user_id: current_user.id)
-    render json: { error: "Partner profile not found" }, status: :not_found unless @partner
+  def set_partner_or_admin
+    # If current user is admin, they can see all grounds
+    if current_user.role == "admin"
+      @grounds = Ground.all
+      return
+    end
+
+    # Otherwise, they must have a partner record
+    partner = Partner.find_by(user_id: current_user.id)
+    if partner.nil?
+      render json: { error: "Partner profile not found" }, status: :not_found
+      return
+    end
+    @grounds = partner.grounds
   end
 end
