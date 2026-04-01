@@ -24,6 +24,13 @@ Rails.application.routes.draw do
     end
   end
 
+  namespace :partners do
+    get :dashboard
+    post :update_payment
+    post :update_staff_payment
+  end
+
+  
   # Admin routes
   get    "/admin/bookings",                    to: "bookings#admin_index"
   get    "/admin/today",                       to: "bookings#today"
@@ -40,12 +47,5 @@ Rails.application.routes.draw do
   # Admin offline bookings (new)
   namespace :admin do
     resources :offline_bookings, only: [:new, :create]
-  end
-
-  # Partner routes
-  namespace :partner do
-    get :dashboard
-    post :update_payment
-    post :update_staff_payment
   end
 end

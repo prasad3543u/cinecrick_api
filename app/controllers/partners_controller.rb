@@ -1,11 +1,10 @@
 class PartnersController < ApplicationController
   before_action :authenticate_request
-  before_action :set_partner_or_admin
+  before_action :set_grounds
 
   def dashboard
-    grounds = @grounds
     bookings = Booking.includes(:ground, :slot, :user)
-                      .where(ground_id: grounds.pluck(:id))
+                      .where(ground_id: @grounds.pluck(:id))
                       .order(created_at: :desc)
 
     stats = {
@@ -15,15 +14,14 @@ class PartnersController < ApplicationController
       cancelled_bookings: bookings.where(status: "cancelled").count,
       total_revenue: bookings.where(status: "confirmed").sum(:total_price),
       pending_payments: PaymentBooking.where(booking_id: bookings.pluck(:id), status: "pending").sum(:amount),
-      grounds_count: grounds.count
+      grounds_count: @grounds.count
     }
 
-    render json: { stats: stats, bookings: bookings, grounds: grounds }, status: :ok
+    render json: { stats: stats, bookings: bookings, grounds: @grounds }, status: :ok
   end
 
   def update_payment
     booking = Booking.find(params[:booking_id])
-    # Ensure booking belongs to a ground that the user has access to
     unless @grounds.include?(booking.ground)
       return render json: { error: "Unauthorized" }, status: :unauthorized
     end
@@ -60,19 +58,16 @@ class PartnersController < ApplicationController
 
   private
 
-  def set_partner_or_admin
-    # If current user is admin, they can see all grounds
+  def set_grounds
     if current_user.role == "admin"
       @grounds = Ground.all
-      return
+    else
+      partner = Partner.find_by(user_id: current_user.id)
+      if partner.nil?
+        render json: { error: "Partner profile not found" }, status: :not_found
+        return
+      end
+      @grounds = partner.grounds
     end
-
-    # Otherwise, they must have a partner record
-    partner = Partner.find_by(user_id: current_user.id)
-    if partner.nil?
-      render json: { error: "Partner profile not found" }, status: :not_found
-      return
-    end
-    @grounds = partner.grounds
   end
 end
