@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   end
 
   namespace :partners do
+    get :slots, to: "partners#slots"
     get :dashboard
     post :update_payment
     post :update_staff_payment

@@ -36,6 +36,27 @@ class PartnersController < ApplicationController
     render json: payment, status: :ok
   end
 
+   def slots
+  ground = Ground.find(params[:ground_id])
+  date = params[:date]
+
+  unless @grounds.include?(ground)
+    return render json: { error: "Unauthorized" }, status: :unauthorized
+  end
+
+  slots = Slot.where(ground_id: ground.id, slot_date: date).order(:start_time)
+
+  render json: slots.as_json(include: {
+    bookings: {
+      include: {
+        user: { only: [:id, :name, :phone, :email] },
+        payment_bookings: { only: [:amount, :status, :payment_date, :notes] },
+        staff_payments: { only: [:staff_type, :name, :amount, :status, :paid_date, :paid_by] }
+      }
+    }
+  }), status: :ok
+end
+
   def update_staff_payment
     booking = Booking.find(params[:booking_id])
     unless @grounds.include?(booking.ground)
