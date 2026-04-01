@@ -2,12 +2,6 @@ class Admin::OfflineBookingsController < ApplicationController
   before_action :authenticate_request
   before_action :authorize_admin
 
-  # GET /admin/offline_bookings/new (optional, not strictly needed)
-  def new
-    render json: { grounds: Ground.all }
-  end
-
-  # POST /admin/offline_bookings
   def create
     ground = Ground.find(params[:ground_id])
     slot = Slot.find(params[:slot_id])
@@ -32,59 +26,38 @@ class Admin::OfflineBookingsController < ApplicationController
     end
 
     bookings = []
-    users.each do |user_data|
-      # Find or create user
-      user = User.find_or_create_by(email: user_data[:email]) do |u|
-        u.name = user_data[:name]
-        u.phone = user_data[:phone]
-        u.password = SecureRandom.hex(8)
-        u.password_confirmation = u.password
-        u.role = 'user'
-      end
 
-      booking = Booking.new(
-        user_id: user.id,
-        ground_id: ground.id,
-        slot_id: slot.id,
-        booking_date: params[:booking_date],
-        match_type: params[:match_type],
-        total_price: user_data[:payment_amount],
-        status: "confirmed",
-        payment_status: user_data[:payment_status] == "paid" ? "paid" : "pending"
-      )
-
-      if booking.save
-        # Payment record
-        PaymentBooking.create(
-          booking_id: booking.id,
-          amount: booking.total_price,
-          status: user_data[:payment_status],
-          payment_date: user_data[:payment_status] == "paid" ? Date.today : nil,
-          notes: "Offline booking by admin"
-        )
-
-        # Umpire payment if provided
-        if params[:umpire_paid].present?
-          StaffPayment.create(
-            booking_id: booking.id,
-            staff_type: "umpire",
-            name: params[:umpire_name] || "Umpire",
-            amount: params[:umpire_amount] || 0,
-            status: params[:umpire_paid],
-            paid_date: params[:umpire_paid] == "paid" ? Date.today : nil
-          )
+    ActiveRecord::Base.transaction do
+      users.each do |user_data|
+        # Find or create user
+        user = User.find_or_create_by(email: user_data[:email]) do |u|
+          u.name = user_data[:name]
+          u.phone = user_data[:phone]
+          u.password = SecureRandom.hex(8)
+          u.password_confirmation = u.password
+          u.role = 'user'
         end
 
-        bookings << booking
-      else
-        return render json: { errors: booking.errors.full_messages }, status: :unprocessable_entity
-      end
-    end
+        booking = Booking.new(
+          user_id: user.id,
+          ground_id: ground.id,
+          slot_id: slot.id,
+          booking_date: params[:booking_date],
+          match_type: params[:match_type],
+          total_price: 0,                # No payment tracked here
+          status: "confirmed",
+          payment_status: "pending"       # No payment recorded
+        )
 
-    # Update slot occupancy
-    slot.update!(teams_booked_count: slot.teams_booked_count + users.size)
-    if slot.teams_booked_count >= slot.max_teams
-      slot.update!(status: "booked")
+        booking.save!
+        bookings << booking
+      end
+
+      # Update slot occupancy
+      slot.update!(teams_booked_count: slot.teams_booked_count + users.size)
+      if slot.teams_booked_count >= slot.max_teams
+        slot.update!(status: "booked")
+      end
     end
 
     render json: { bookings: bookings, message: "Offline booking(s) created successfully" }, status: :created
