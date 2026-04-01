@@ -9,6 +9,7 @@ class Admin::OfflineBookingsController < ApplicationController
     available = slot.max_teams - slot.teams_booked_count
     users = params[:users] || []
 
+    # Validate match type and capacity
     if params[:match_type] == "with_opponents"
       if users.size != 2
         return render json: { error: "With opponents requires exactly 2 teams" }, status: :unprocessable_entity
@@ -30,12 +31,17 @@ class Admin::OfflineBookingsController < ApplicationController
     ActiveRecord::Base.transaction do
       users.each do |user_data|
         # Find or create user
-        user = User.find_or_create_by(email: user_data[:email]) do |u|
-          u.name = user_data[:name]
-          u.phone = user_data[:phone]
-          u.password = SecureRandom.hex(8)
-          u.password_confirmation = u.password
-          u.role = 'user'
+        user = User.find_or_initialize_by(email: user_data[:email])
+        user.name = user_data[:name]
+        user.phone = user_data[:phone]
+        if user.new_record?
+          user.password = SecureRandom.hex(8)
+          user.password_confirmation = user.password
+          user.role = 'user'
+        end
+
+        unless user.save
+          return render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
 
         booking = Booking.new(
@@ -44,12 +50,14 @@ class Admin::OfflineBookingsController < ApplicationController
           slot_id: slot.id,
           booking_date: params[:booking_date],
           match_type: params[:match_type],
-          total_price: 0,                # No payment tracked here
+          total_price: 0,
           status: "confirmed",
-          payment_status: "pending"       # No payment recorded
+          payment_status: "pending"
         )
 
-        booking.save!
+        unless booking.save
+          return render json: { errors: booking.errors.full_messages }, status: :unprocessable_entity
+        end
         bookings << booking
       end
 
