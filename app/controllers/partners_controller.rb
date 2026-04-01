@@ -1,6 +1,6 @@
 class PartnersController < ApplicationController
   before_action :authenticate_request
-  before_action :set_grounds
+  before_action :set_accessible_grounds
 
   def dashboard
     bookings = Booking.includes(:ground, :slot, :user)
@@ -20,6 +20,26 @@ class PartnersController < ApplicationController
     render json: { stats: stats, bookings: bookings, grounds: @grounds }, status: :ok
   end
 
+  def slots
+    ground = Ground.find(params[:ground_id])
+    unless @grounds.include?(ground)
+      return render json: { error: "Unauthorized" }, status: :unauthorized
+    end
+
+    date = params[:date]
+    slots = Slot.where(ground_id: ground.id, slot_date: date).order(:start_time)
+
+    render json: slots.as_json(include: {
+      bookings: {
+        include: {
+          user: { only: [:id, :name, :phone, :email] },
+          payment_bookings: { only: [:amount, :status, :payment_date, :notes] },
+          staff_payments: { only: [:staff_type, :name, :amount, :status, :paid_date, :paid_by] }
+        }
+      }
+    }), status: :ok
+  end
+
   def update_payment
     booking = Booking.find(params[:booking_id])
     unless @grounds.include?(booking.ground)
@@ -35,27 +55,6 @@ class PartnersController < ApplicationController
     )
     render json: payment, status: :ok
   end
-
-   def slots
-  ground = Ground.find(params[:ground_id])
-  date = params[:date]
-
-  unless @grounds.include?(ground)
-    return render json: { error: "Unauthorized" }, status: :unauthorized
-  end
-
-  slots = Slot.where(ground_id: ground.id, slot_date: date).order(:start_time)
-
-  render json: slots.as_json(include: {
-    bookings: {
-      include: {
-        user: { only: [:id, :name, :phone, :email] },
-        payment_bookings: { only: [:amount, :status, :payment_date, :notes] },
-        staff_payments: { only: [:staff_type, :name, :amount, :status, :paid_date, :paid_by] }
-      }
-    }
-  }), status: :ok
-end
 
   def update_staff_payment
     booking = Booking.find(params[:booking_id])
@@ -79,7 +78,7 @@ end
 
   private
 
-  def set_grounds
+  def set_accessible_grounds
     if current_user.role == "admin"
       @grounds = Ground.all
     else
