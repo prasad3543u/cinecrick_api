@@ -141,12 +141,12 @@ class BookingsController < ApplicationController
       }, status: :unprocessable_entity
     end
 
-    # Fix: was using umpire_arranged — correct field is umpire_reached
+    # Updated to use the renamed column `umpire_arranged`
     booking.update!(
-      umpire_reached: params.key?(:umpire_reached) ? params[:umpire_reached] : booking.umpire_reached,
-      water_arranged: params.key?(:water_arranged) ? params[:water_arranged] : booking.water_arranged,
-      balls_ready:    params.key?(:balls_ready)    ? params[:balls_ready]    : booking.balls_ready,
-      ground_ready:   params.key?(:ground_ready)   ? params[:ground_ready]   : booking.ground_ready
+      umpire_arranged: params.key?(:umpire_arranged) ? params[:umpire_arranged] : booking.umpire_arranged,
+      water_arranged:  params.key?(:water_arranged)  ? params[:water_arranged]  : booking.water_arranged,
+      balls_ready:     params.key?(:balls_ready)     ? params[:balls_ready]     : booking.balls_ready,
+      ground_ready:    params.key?(:ground_ready)    ? params[:ground_ready]    : booking.ground_ready
     )
     render json: booking.as_json(include: [:ground, :slot, :user]), status: :ok
   rescue => e
