@@ -21,12 +21,18 @@ class PartnersController < ApplicationController
   end
 
   def slots
-    ground = Ground.find(params[:ground_id])
-    unless @grounds.include?(ground)
-      return render json: { error: "Unauthorized" }, status: :unauthorized
+    ground_id = params[:ground_id]
+    date = params[:date]
+
+    if ground_id.blank? || date.blank?
+      return render json: { error: "ground_id and date are required" }, status: :bad_request
     end
 
-    date = params[:date]
+    ground = Ground.find_by(id: ground_id)
+    unless ground && @grounds.include?(ground)
+      return render json: { error: "Unauthorized or ground not found" }, status: :unauthorized
+    end
+
     slots = Slot.where(ground_id: ground.id, slot_date: date).order(:start_time)
 
     render json: slots.as_json(include: {
@@ -38,6 +44,9 @@ class PartnersController < ApplicationController
         }
       }
     }), status: :ok
+  rescue => e
+    Rails.logger.error "PartnersController#slots error: #{e.message}"
+    render json: { error: "Internal server error: #{e.message}" }, status: :internal_server_error
   end
 
   def update_payment
