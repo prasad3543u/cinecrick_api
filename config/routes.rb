@@ -4,13 +4,12 @@ Rails.application.routes.draw do
   post "/auth/signup",        to: "auth#signup"
   post "/auth/login",         to: "auth#login"
   post "/auth/refresh_token", to: "auth#refresh_token"
+  post "/ai/chat",            to: "ai#chat"
   get  "/me",                 to: "auth#me"
   patch "/me/update",         to: "auth#update_profile"
   patch "/me/change_password", to: "auth#change_password"
   delete "/me/delete",        to: "auth#delete_account"
   
-  post "/ai/chat", to: "ai#chat"
-
 
   resources :grounds do
     post :generate_slots, on: :member
