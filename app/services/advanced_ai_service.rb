@@ -1,5 +1,5 @@
 class AdvancedAiService
-  def chat(message, user_context = {})
+  def chat(message)
     msg = message.downcase
     grounds = Ground.all.to_a
 
@@ -21,9 +21,9 @@ class AdvancedAiService
     if msg.include?("cancel")
       return <<~TEXT
         Cancellation Policy:
-        • Cancel >3 days before match → 100% refund
+        • Cancel more than 3 days before match → 100% refund
         • Cancel 2-3 days before → 25% refund
-        • Cancel <48 hours → No refund
+        • Cancel within 48 hours → No refund
       TEXT
     end
 
@@ -33,7 +33,7 @@ class AdvancedAiService
         Pricing (per 3-hour slot):
         Weekdays (Mon-Fri): ₹2500
         Weekends (Sat-Sun): Morning ₹4000, Mid-Day ₹3500, Evening ₹3000
-        Without Opponents: 2x price
+        Without Opponents: 2x price (full ground)
       TEXT
     end
 
@@ -41,15 +41,15 @@ class AdvancedAiService
     if msg.include?("slot") || msg.include?("time")
       return <<~TEXT
         Slot Timings:
-        Morning: 6:30 – 9:30
-        Mid-Day: 9:30 – 12:30
+        Morning: 06:30 – 09:30
+        Mid-Day: 09:30 – 12:30
         Evening: 13:00 – 18:00
       TEXT
     end
 
-    # Ground recommendations
+    # Ground recommendations (with real data)
     if grounds.any? && msg.include?("ground")
-      # Price filter
+      # Price filter (under X)
       if msg =~ /under\s+(\d+)/
         max_price = $1.to_i
         affordable = grounds.select { |g| g.price_per_hour <= max_price }
@@ -84,7 +84,13 @@ class AdvancedAiService
         return "The cheapest ground is #{cheapest.name} at ₹#{cheapest.price_per_hour}/hour in #{cheapest.location}."
       end
 
-      # Default – show top 3
+      # Most expensive
+      if msg.include?("expensive") || msg.include?("premium")
+        expensive = grounds.max_by(&:price_per_hour)
+        return "The most expensive ground is #{expensive.name} at ₹#{expensive.price_per_hour}/hour in #{expensive.location}."
+      end
+
+      # Default – show top 3 grounds
       top = grounds.first(3)
       response = "Here are some grounds:\n"
       top.each { |g| response += "• #{g.name}: ₹#{g.price_per_hour}/hour, #{g.location}\n" }
@@ -96,7 +102,7 @@ class AdvancedAiService
       return "Hello! I'm your CrickOps assistant. I can help with bookings, cancellations, pricing, slot timings, and finding grounds. What would you like to know?"
     end
 
-    # Default help
+    # Default help menu
     return <<~TEXT
       I'm your CrickOps assistant. You can ask me about:
       • How to book a slot
@@ -105,7 +111,7 @@ class AdvancedAiService
       • Slot timings
       • Grounds under a price (e.g., "ground under 2000")
       • Grounds in a location (e.g., "ground in Bangalore")
-      • The cheapest ground
+      • The cheapest or most expensive ground
     TEXT
   end
 end
