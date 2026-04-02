@@ -45,6 +45,8 @@ Rails.application.routes.draw do
   post   "/admin/trigger_auto_reminders",      to: "admin#trigger_auto_reminders"
   patch  "/admin/bookings/:id/reset_reminder", to: "bookings#reset_reminder"
 
+  post "/ai/chat", to: "ai#chat"
+  
   # Admin offline bookings (new)
   namespace :admin do
     resources :offline_bookings, only: [:new, :create]
