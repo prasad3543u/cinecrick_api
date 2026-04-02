@@ -10,7 +10,7 @@ class AiController < ApplicationController
     end
 
     ai_service = AdvancedAiService.new
-    response = ai_service.chat(message, {})
+    response = ai_service.chat(message)
 
     render json: { response: response }, status: :ok
   rescue => e
