@@ -1,5 +1,5 @@
+# app/controllers/ai_controller.rb
 class AiController < ApplicationController
-  # Only skip authentication for the chat endpoint (optional, but fine)
   skip_before_action :authenticate_request, only: [:chat]
 
   def chat
